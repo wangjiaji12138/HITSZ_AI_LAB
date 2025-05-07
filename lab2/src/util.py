@@ -1,7 +1,6 @@
 # coding: utf-8
 import numpy as np
 from six.moves import cPickle as pickle
-import numpy as np
 import os
 import platform
 import urllib.request
@@ -15,14 +14,15 @@ def sigmoid(x):
     返回:sigmoid函数值,numpy数组类型
     """
     # 指数函数可直接使用numpy.exp()
-    Todo()
+    return 1 / (1 + np.exp(-x))
 
 def sigmoid_grad(x):
     """ sigmoid函数梯度
     x: numpy数组类型
     返回: 梯度值,numpy数组类型
     """
-    Todo()
+    sigmoid_x = sigmoid(x)
+    return sigmoid_x * (1 - sigmoid_x)
 
 
 def softmax(x):
@@ -31,7 +31,12 @@ def softmax(x):
     返回: numpy数组类型
     """
     # 如果x中的值过大会导致指数计算的结果过大发生溢出：np.exp(x)会出现inf，最终的结果会出现nan，可考虑减去每一个样本对应x中的最大值
-    Todo()
+    if x.ndim == 2:
+        x = x - x.max(axis=1, keepdims=True)
+        y = np.exp(x)
+        return y / y.sum(axis=1, keepdims=True)
+    x = x - np.max(x)
+    return np.exp(x) / np.sum(np.exp(x))
 
 def cross_entropy_error(y, t):
     # y是预测标签，t是真实标签
@@ -130,8 +135,29 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x_p, w, b, conv_param)  返回填充后的x便于反向传播直接使用
     """
-    
-    Todo()
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    stride = conv_param['stride']
+    pad = conv_param['pad']
+
+    H_out = 1 + (H + 2 * pad - HH) // stride
+    W_out = 1 + (W + 2 * pad - WW) // stride
+
+    x_p = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    out = np.zeros((N, F, H_out, W_out))
+
+    for n in range(N):
+        for f in range(F):
+            for i in range(H_out):
+                for j in range(W_out):
+                    h_start = i * stride
+                    h_end = h_start + HH
+                    w_start = j * stride
+                    w_end = w_start + WW
+                    out[n, f, i, j] = np.sum(x_p[n, :, h_start:h_end, w_start:w_end] * w[f]) + b[f]
+
+    cache = (x_p, w, b, conv_param)
+    return out, cache
     
 
 def conv_backward_naive(dout, cache):
